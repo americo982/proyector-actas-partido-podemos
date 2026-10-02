@@ -56,7 +56,7 @@ if uploaded_file is not None:
                 Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
                 """
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=[image, prompt]
                 )
                 text_res = response.text.strip().replace("```json", "").replace("```", "")
