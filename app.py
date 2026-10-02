@@ -53,12 +53,11 @@ if uploaded_file is not None:
                 - total (total votos emitidos)
                 Devuelve únicamente el JSON válido sin texto adicional.
                 """
-              response = client.models.generate_content(
-                    model='gemini-1.5-flash',  # <--- Cambia esto aquí
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
                     contents=[image, prompt]
                 )
                 import json
-                # Limpiar la respuesta para asegurar formato JSON
                 text_res = response.text.strip().replace("```json", "").replace("```", "")
                 extracted = json.loads(text_res)
                 
@@ -172,4 +171,4 @@ if os.path.exists(DB_FILE):
     totales_partidos.columns = ["Organización Política", "Total Acumulado"]
     st.bar_chart(totales_partidos.set_index("Organización Política"))
 else:
-    st.info("ℹ️️ Aún no hay actas registradas. Sube la primera acta arriba para comenzar.")
+    st.info("ℹ Aún no hay actas registradas. Sube la primera acta arriba para comenzar.")
