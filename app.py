@@ -3,20 +3,19 @@ import pandas as pd
 from datetime import datetime
 import os
 from PIL import Image
-from google import genai
+import google.generativeai as genai
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y la IA extraerá automáticamente los datos correctos para que solo tengas que guardarlos.")
+st.markdown("Sube tu acta de sufragio y la IA extraerá automáticamente los datos correctos.")
 
 DB_FILE = "base_datos_actas.csv"
 
-# Inicializar cliente de Gemini (usando el secreto de Streamlit)
-try:
-    client = genai.Client(api_key=st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", "")))
-except Exception:
-    client = None
+# Configurar API Key de forma segura desde los secretos de Streamlit
+api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+if api_key:
+    genai.configure(api_key=api_key)
 
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
@@ -33,10 +32,11 @@ if uploaded_file is not None:
         "blancos": 10, "nulos": 2, "total": 280
     }
 
-    # Extracción automática con IA si está disponible
-    if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
+    # Extracción automática con IA
+    if api_key and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
         with st.spinner("🤖 Leyendo el acta de forma inteligente..."):
             try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 prompt = """
                 Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
                 - mesa (número de mesa, ej: "000101")
@@ -51,12 +51,9 @@ if uploaded_file is not None:
                 - blancos (votos en blanco)
                 - nulos (votos nulos)
                 - total (total votos emitidos)
-                Devuelve únicamente el JSON válido sin texto adicional.
+                Devuelve únicamente el JSON válido sin texto adicional ni bloques markdown.
                 """
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash',
-                    contents=[image, prompt]
-                )
+                response = model.generate_content([image, prompt])
                 import json
                 text_res = response.text.strip().replace("```json", "").replace("```", "")
                 extracted = json.loads(text_res)
@@ -65,7 +62,7 @@ if uploaded_file is not None:
                 st.session_state["last_file"] = uploaded_file.name
                 st.success("✅ ¡Datos extraídos con éxito del acta!")
             except Exception as e:
-                st.warning(f"No se pudo autocompletar con IA, usando valores por defecto. Detalle: {e}")
+                st.warning(f"Usando valores por defecto. Detalle: {e}")
                 st.session_state["parsed_data"] = default_vals
                 st.session_state["last_file"] = uploaded_file.name
 
