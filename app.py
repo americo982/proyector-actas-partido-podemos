@@ -3,7 +3,8 @@ import pandas as pd
 from datetime import datetime
 import os
 from PIL import Image
-import google.generativeai as genai
+from google import genai
+import json
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
@@ -12,10 +13,12 @@ st.markdown("Sube tu acta de sufragio y la IA extraerá automáticamente los dat
 
 DB_FILE = "base_datos_actas.csv"
 
-# Configurar API Key de forma segura desde los secretos de Streamlit
-api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-if api_key:
-    genai.configure(api_key=api_key)
+# Inicializar cliente de Gemini de forma segura
+try:
+    api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+    client = genai.Client(api_key=api_key) if api_key else None
+except Exception:
+    client = None
 
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
@@ -24,19 +27,18 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Acta cargada correctamente", width=450)
     
-    # Valores por defecto por si la IA no está configurada o falla
+    # Valores por defecto por si la IA falla o no está configurada
     default_vals = {
         "mesa": "000101",
-        "p1": 45, "p2": 38, "p3": 25, "p4": 40,
-        "p5": 30, "p6": 22, "p7": 50, "p8": 18,
-        "blancos": 10, "nulos": 2, "total": 280
+        "p1": 35, "p2": 55, "p3": 43, "p4": 35,
+        "p5": 48, "p6": 25, "p7": 30, "p8": 22,
+        "blancos": 12, "nulos": 6, "total": 280
     }
 
     # Extracción automática con IA
-    if api_key and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
+    if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
         with st.spinner("🤖 Leyendo el acta de forma inteligente..."):
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
                 prompt = """
                 Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
                 - mesa (número de mesa, ej: "000101")
@@ -51,10 +53,12 @@ if uploaded_file is not None:
                 - blancos (votos en blanco)
                 - nulos (votos nulos)
                 - total (total votos emitidos)
-                Devuelve únicamente el JSON válido sin texto adicional ni bloques markdown.
+                Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
                 """
-                response = model.generate_content([image, prompt])
-                import json
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[image, prompt]
+                )
                 text_res = response.text.strip().replace("```json", "").replace("```", "")
                 extracted = json.loads(text_res)
                 
@@ -82,22 +86,22 @@ if uploaded_file is not None:
         
         col1, col2 = st.columns(2)
         with col1:
-            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=int(data.get("p1", 45)), step=1)
-            p2 = st.number_input("2. AMOR", min_value=0, value=int(data.get("p2", 38)), step=1)
-            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=int(data.get("p3", 25)), step=1)
-            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=int(data.get("p4", 40)), step=1)
+            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=int(data.get("p1", 35)), step=1)
+            p2 = st.number_input("2. AMOR", min_value=0, value=int(data.get("p2", 55)), step=1)
+            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=int(data.get("p3", 43)), step=1)
+            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=int(data.get("p4", 35)), step=1)
         with col2:
-            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=int(data.get("p5", 30)), step=1)
-            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=int(data.get("p6", 22)), step=1)
-            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=int(data.get("p7", 50)), step=1)
-            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 18)), step=1)
+            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=int(data.get("p5", 48)), step=1)
+            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=int(data.get("p6", 25)), step=1)
+            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=int(data.get("p7", 30)), step=1)
+            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 22)), step=1)
             
         st.markdown("---")
         col_b1, col_b2, col_b3 = st.columns(3)
         with col_b1:
-            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 10)), step=1)
+            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 12)), step=1)
         with col_b2:
-            b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 2)), step=1)
+            b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 6)), step=1)
         with col_b3:
             total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=int(data.get("total", 280)), step=1)
         
