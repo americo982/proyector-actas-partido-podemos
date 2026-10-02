@@ -9,8 +9,15 @@ import time
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
+# --- LOGO EN LA BARRA LATERAL (ESQUINA) ---
+try:
+    st.sidebar.image("logo.png", width=180)
+    st.sidebar.markdown("---")
+except Exception:
+    pass
+
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente.")
+st.markdown("Sube tu acta de sufragio, haz clic en el botón para extraer los datos con IA o ingrésalos manualmente.")
 
 DB_FILE = "base_datos_actas.csv"
 
@@ -36,7 +43,7 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Acta cargada correctamente", width=450)
     
-    # Botón manual para procesar con IA
+    # --- BOTÓN DE IA CORREGIDO Y VISIBLE ---
     if client:
         if st.button("🤖 Procesar / Leer Acta con Inteligencia Artificial"):
             with st.spinner("Analizando acta, por favor espera un momento..."):
@@ -76,6 +83,7 @@ if uploaded_file is not None:
                 if extracted:
                     st.session_state["parsed_data"] = extracted
                     st.success("¡Datos extraídos con éxito por la IA!")
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.warning("No se pudo conectar con la IA. Los campos están listos para ingreso manual.")
@@ -145,8 +153,15 @@ if uploaded_file is not None:
                 df_nuevo = pd.DataFrame([nuevo_registro])
                 
             df_nuevo.to_csv(DB_FILE, index=False)
-            st.balloons()
-            st.success(f"¡Mesa N° {mesa} registrada con éxito! Total de actas acumuladas: {len(df_nuevo)}")
+            
+            if "parsed_data" in st.session_state:
+                del st.session_state["parsed_data"]
+            if "last_file" in st.session_state:
+                del st.session_state["last_file"]
+                
+            st.success(f"¡Mesa N° {mesa} registrada con éxito!")
+            time.sleep(1)
+            st.rerun()
 
 # --- SECCIÓN DE CONSOLIDADO Y GRÁFICOS ---
 st.markdown("---")
