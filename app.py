@@ -145,16 +145,8 @@ if uploaded_file is not None:
                 df_nuevo = pd.DataFrame([nuevo_registro])
                 
             df_nuevo.to_csv(DB_FILE, index=False)
-            
-            # Limpiamos los datos temporales de la sesión para dejar listo para la siguiente acta
-            if "parsed_data" in st.session_state:
-                del st.session_state["parsed_data"]
-            if "last_file" in st.session_state:
-                del st.session_state["last_file"]
-                
-            st.success(f"¡Mesa N° {mesa} registrada con éxito!")
-            time.sleep(1)
-            st.rerun() # Actualiza la página automáticamente
+            st.balloons()
+            st.success(f"¡Mesa N° {mesa} registrada con éxito! Total de actas acumuladas: {len(df_nuevo)}")
 
 # --- SECCIÓN DE CONSOLIDADO Y GRÁFICOS ---
 st.markdown("---")
