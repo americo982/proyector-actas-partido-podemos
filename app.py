@@ -9,8 +9,28 @@ import time
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
+# Estilos CSS personalizados para la interfaz electoral
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .stButton>button {
+        background-color: #ffcc00;
+        color: #000000;
+        font-weight: bold;
+        border-radius: 8px;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #e6b800;
+        color: #000000;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente.")
+st.markdown("---")
 
 DB_FILE = "base_datos_actas.csv"
 
@@ -146,7 +166,6 @@ if uploaded_file is not None:
                 
             df_nuevo.to_csv(DB_FILE, index=False)
             
-            # Limpiamos los datos temporales de la sesión para dejar listo para la siguiente acta
             if "parsed_data" in st.session_state:
                 del st.session_state["parsed_data"]
             if "last_file" in st.session_state:
@@ -154,7 +173,7 @@ if uploaded_file is not None:
                 
             st.success(f"¡Mesa N° {mesa} registrada con éxito!")
             time.sleep(1)
-            st.rerun() # Actualiza la página automáticamente
+            st.rerun()
 
 # --- SECCIÓN DE CONSOLIDADO Y GRÁFICOS ---
 st.markdown("---")
