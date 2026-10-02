@@ -5,6 +5,7 @@ import os
 from PIL import Image
 from google import genai
 import json
+import time
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
@@ -35,40 +36,47 @@ if uploaded_file is not None:
         "blancos": 12, "nulos": 6, "total": 280
     }
 
-    # Extracción automática con IA
+    # Extracción automática con IA y reintentos automáticos para evitar errores 503
     if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
-        with st.spinner("🤖 Leyendo el acta de forma inteligente..."):
-            try:
-                prompt = """
-                Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
-                - mesa (número de mesa, ej: "000101")
-                - p1 (votos para AMANECER DE NUEVO)
-                - p2 (votos para AMOR)
-                - p3 (votos para GOTAS DE LLUVIA)
-                - p4 (votos para LA MAGIA DEL ENCUENTRO)
-                - p5 (votos para CUIDEMOS EL PLANETA)
-                - p6 (votos para LOS CAMPEONES)
-                - p7 (votos para ORDENANDO LA CASA)
-                - p8 (votos para COLECCIONISTA DE OBJETOS)
-                - blancos (votos en blanco)
-                - nulos (votos nulos)
-                - total (total votos emitidos)
-                Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
-                """
-                response = client.models.generate_content(
-                    model='gemini-flash-latest',
-                    contents=[image, prompt]
-                )
-                text_res = response.text.strip().replace("```json", "").replace("```", "")
-                extracted = json.loads(text_res)
-                
-                st.session_state["parsed_data"] = extracted
-                st.session_state["last_file"] = uploaded_file.name
+        with st.spinner("🤖 Leyendo el acta de forma inteligente (esto puede tomar un momento)..."):
+            extracted = None
+            max_intentos = 3
+            for intento in range(max_intentos):
+                try:
+                    prompt = """
+                    Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
+                    - mesa (número de mesa, ej: "000101")
+                    - p1 (votos para AMANECER DE NUEVO)
+                    - p2 (votos para AMOR)
+                    - p3 (votos para GOTAS DE LLUVIA)
+                    - p4 (votos para LA MAGIA DEL ENCUENTRO)
+                    - p5 (votos para CUIDEMOS EL PLANETA)
+                    - p6 (votos para LOS CAMPEONES)
+                    - p7 (votos para ORDENANDO LA CASA)
+                    - p8 (votos para COLECCIONISTA DE OBJETOS)
+                    - blancos (votos en blanco)
+                    - nulos (votos nulos)
+                    - total (total votos emitidos)
+                    Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
+                    """
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[image, prompt]
+                    )
+                    text_res = response.text.strip().replace("```json", "").replace("```", "")
+                    extracted = json.loads(text_res)
+                    break # Si sale bien, rompe el ciclo
+                except Exception as e:
+                    if intento < max_intentos - 1:
+                        time.sleep(2) # Espera 2 segundos antes de reintentar
+                    else:
+                        st.warning(f"Usando valores por defecto debido a alta demanda. Detalle: {e}")
+                        extracted = default_vals
+
+            st.session_state["parsed_data"] = extracted
+            st.session_state["last_file"] = uploaded_file.name
+            if extracted != default_vals:
                 st.success("✅ ¡Datos extraídos con éxito del acta!")
-            except Exception as e:
-                st.warning(f"Usando valores por defecto. Detalle: {e}")
-                st.session_state["parsed_data"] = default_vals
-                st.session_state["last_file"] = uploaded_file.name
 
     data = st.session_state.get("parsed_data", default_vals)
 
