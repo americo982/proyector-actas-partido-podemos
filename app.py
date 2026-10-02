@@ -36,7 +36,7 @@ if uploaded_file is not None:
         "blancos": 12, "nulos": 6, "total": 280
     }
 
-    # Extracción automática con IA y reintentos automáticos para evitar errores 503
+    # Extracción automática con IA y reintentos automáticos
     if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
         with st.spinner("🤖 Leyendo el acta de forma inteligente (esto puede tomar un momento)..."):
             extracted = None
@@ -60,7 +60,7 @@ if uploaded_file is not None:
                     Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
                     """
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.8-flash',
                         contents=[image, prompt]
                     )
                     text_res = response.text.strip().replace("```json", "").replace("```", "")
@@ -68,9 +68,9 @@ if uploaded_file is not None:
                     break # Si sale bien, rompe el ciclo
                 except Exception as e:
                     if intento < max_intentos - 1:
-                        time.sleep(2) # Espera 2 segundos antes de reintentar
+                        time.sleep(2)
                     else:
-                        st.warning(f"Usando valores por defecto debido a alta demanda. Detalle: {e}")
+                        st.warning(f"Usando valores por defecto. Detalle: {e}")
                         extracted = default_vals
 
             st.session_state["parsed_data"] = extracted
