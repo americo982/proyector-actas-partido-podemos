@@ -9,28 +9,15 @@ import time
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
-# Estilos CSS personalizados para la interfaz electoral
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .stButton>button {
-        background-color: #ffcc00;
-        color: #000000;
-        font-weight: bold;
-        border-radius: 8px;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #e6b800;
-        color: #000000;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# --- LOGO EN LA BARRA LATERAL (ESQUINA) ---
+try:
+    st.sidebar.image("logo.png", width=180)
+    st.sidebar.markdown("---")
+except Exception:
+    pass
 
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("---")
+st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente.")
 
 DB_FILE = "base_datos_actas.csv"
 
