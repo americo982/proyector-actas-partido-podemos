@@ -2,54 +2,108 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+from PIL import Image
+from google import genai
 
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
-st.title("🗳️ Sistema de Registro y Proyección de Actas Electorales")
-st.markdown("Sube tu acta de sufragio para visualizarla y registra los votos con rapidez.")
+st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
+st.markdown("Sube tu acta de sufragio y la IA extraerá automáticamente los datos correctos para que solo tengas que guardarlos.")
 
 DB_FILE = "base_datos_actas.csv"
+
+# Inicializar cliente de Gemini (usando el secreto de Streamlit)
+try:
+    client = genai.Client(api_key=st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", "")))
+except Exception:
+    client = None
 
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    st.image(uploaded_file, caption="Acta cargada correctamente", width=450)
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Acta cargada correctamente", width=450)
     
-    st.info("💡 **Consejo rápido:** Visualiza los números en la imagen de arriba y confirma o ajusta los valores en el formulario de abajo para guardarlos al instante.")
-    
-    with st.form(key="acta_form_eficiente"):
-        st.subheader("📝 Registro de Datos del Acta")
+    # Valores por defecto por si la IA no está configurada o falla
+    default_vals = {
+        "mesa": "000101",
+        "p1": 45, "p2": 38, "p3": 25, "p4": 40,
+        "p5": 30, "p6": 22, "p7": 50, "p8": 18,
+        "blancos": 10, "nulos": 2, "total": 280
+    }
+
+    # Extracción automática con IA si está disponible
+    if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
+        with st.spinner("🤖 Leyendo el acta de forma inteligente..."):
+            try:
+                prompt = """
+                Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
+                - mesa (número de mesa, ej: "000101")
+                - p1 (votos para AMANECER DE NUEVO)
+                - p2 (votos para AMOR)
+                - p3 (votos para GOTAS DE LLUVIA)
+                - p4 (votos para LA MAGIA DEL ENCUENTRO)
+                - p5 (votos para CUIDEMOS EL PLANETA)
+                - p6 (votos para LOS CAMPEONES)
+                - p7 (votos para ORDENANDO LA CASA)
+                - p8 (votos para COLECCIONISTA DE OBJETOS)
+                - blancos (votos en blanco)
+                - nulos (votos nulos)
+                - total (total votos emitidos)
+                Devuelve únicamente el JSON válido sin texto adicional.
+                """
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[image, prompt]
+                )
+                import json
+                # Limpiar la respuesta para asegurar formato JSON
+                text_res = response.text.strip().replace("```json", "").replace("```", "")
+                extracted = json.loads(text_res)
+                
+                st.session_state["parsed_data"] = extracted
+                st.session_state["last_file"] = uploaded_file.name
+                st.success("✅ ¡Datos extraídos con éxito del acta!")
+            except Exception as e:
+                st.warning(f"No se pudo autocompletar con IA, usando valores por defecto. Detalle: {e}")
+                st.session_state["parsed_data"] = default_vals
+                st.session_state["last_file"] = uploaded_file.name
+
+    data = st.session_state.get("parsed_data", default_vals)
+
+    with st.form(key="acta_form_inteligente"):
+        st.subheader("📝 Verificación y Registro de Datos del Acta")
         
         col_mesa, col_tipo = st.columns(2)
         with col_mesa:
-            mesa = st.text_input("N° de Mesa de Votación", value="000101")
+            mesa = st.text_input("N° de Mesa de Votación", value=str(data.get("mesa", "000101")))
         with col_tipo:
             tipo_acta = st.selectbox("Tipo de Elección", ["Regional / Municipal", "Presidencial", "Congresal"])
         
         st.markdown("---")
-        st.markdown("**Votos por Organización Política:**")
+        st.markdown("**Votos por Organización Política (Extraídos del acta):**")
         
         col1, col2 = st.columns(2)
         with col1:
-            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=20, step=1)
-            p2 = st.number_input("2. AMOR", min_value=0, value=58, step=1)
-            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=42, step=1)
-            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=35, step=1)
+            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=int(data.get("p1", 45)), step=1)
+            p2 = st.number_input("2. AMOR", min_value=0, value=int(data.get("p2", 38)), step=1)
+            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=int(data.get("p3", 25)), step=1)
+            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=int(data.get("p4", 40)), step=1)
         with col2:
-            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=48, step=1)
-            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=30, step=1)
-            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=25, step=1)
-            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=15, step=1)
+            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=int(data.get("p5", 30)), step=1)
+            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=int(data.get("p6", 22)), step=1)
+            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=int(data.get("p7", 50)), step=1)
+            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 18)), step=1)
             
         st.markdown("---")
         col_b1, col_b2, col_b3 = st.columns(3)
         with col_b1:
-            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=8, step=1)
+            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 10)), step=1)
         with col_b2:
-            b_nulo = st.number_input("Votos Nulos", min_value=0, value=2, step=1)
+            b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 2)), step=1)
         with col_b3:
-            total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=280, step=1)
+            total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=int(data.get("total", 280)), step=1)
         
         submit_button = st.form_submit_button(label="💾 Guardar y Consolidar Acta")
         
@@ -118,4 +172,4 @@ if os.path.exists(DB_FILE):
     totales_partidos.columns = ["Organización Política", "Total Acumulado"]
     st.bar_chart(totales_partidos.set_index("Organización Política"))
 else:
-    st.info("ℹ️ Aún no hay actas registradas. Sube la primera acta arriba para comenzar.")
+    st.info("ℹ️️ Aún no hay actas registradas. Sube la primera acta arriba para comenzar.")
