@@ -6,9 +6,8 @@ import os
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
 st.title("🗳️ Sistema de Registro y Proyección de Actas Electorales")
-st.markdown("Sube la imagen de cada acta para extraer y acumular automáticamente los votos en la base de datos central.")
+st.markdown("Sube la imagen de cada acta y registra sus valores reales para actualizar las proyecciones.")
 
-# Archivo CSV que actuará como base de datos en la nube
 DB_FILE = "base_datos_actas.csv"
 
 # Carga de la imagen del acta
@@ -17,30 +16,30 @@ uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)"
 if uploaded_file is not None:
     st.image(uploaded_file, caption="Acta cargada", width=400)
     
-    st.success("¡Imagen recibida! Verifique los datos extraídos:")
+    st.success("¡Imagen recibida! Ingrese los datos exactos que figuran en esta acta:")
     
-    # Formulario de registro de datos del acta
+    # Formulario con valores editables independientes por acta
     with st.form(key="acta_form"):
-        st.subheader("Datos Extraídos del Acta")
-        mesa = st.text_input("N° de Mesa", value="000000")
+        st.subheader("Datos del Acta Actual")
+        mesa = st.text_input("N° de Mesa (Ej: 000101)", value="000101")
         
         col1, col2 = st.columns(2)
         with col1:
-            p1 = st.number_input("AMANECER DE NUEVO", value=32)
-            p2 = st.number_input("AMOR", value=32)
-            p3 = st.number_input("GOTAS DE LLUVIA", value=32)
-            p4 = st.number_input("LA MAGIA DEL ENCUENTRO", value=32)
+            p1 = st.number_input("AMANECER DE NUEVO", min_value=0, value=32, step=1)
+            p2 = st.number_input("AMOR", min_value=0, value=32, step=1)
+            p3 = st.number_input("GOTAS DE LLUVIA", min_value=0, value=32, step=1)
+            p4 = st.number_input("LA MAGIA DEL ENCUENTRO", min_value=0, value=32, step=1)
         with col2:
-            p5 = st.number_input("CUIDEMOS EL PLANETA", value=32)
-            p6 = st.number_input("LOS CAMPEONES", value=32)
-            p7 = st.number_input("ORDENANDO LA CASA", value=32)
-            p8 = st.number_input("COLECCIONISTA DE OBJETOS", value=32)
+            p5 = st.number_input("CUIDEMOS EL PLANETA", min_value=0, value=32, step=1)
+            p6 = st.number_input("LOS CAMPEONES", min_value=0, value=32, step=1)
+            p7 = st.number_input("ORDENANDO LA CASA", min_value=0, value=32, step=1)
+            p8 = st.number_input("COLECCIONISTA DE OBJETOS", min_value=0, value=32, step=1)
             
         st.markdown("---")
-        b_blanco = st.number_input("Votos en Blanco", value=15)
-        b_nulo = st.number_input("Votos Nulos", value=9)
-        b_impugnado = st.number_input("Votos Impugnados", value=0)
-        total_emitidos = st.number_input("Total de Votos Emitidos", value=280)
+        b_blanco = st.number_input("Votos en Blanco", min_value=0, value=15, step=1)
+        b_nulo = st.number_input("Votos Nulos", min_value=0, value=9, step=1)
+        b_impugnado = st.number_input("Votos Impugnados", min_value=0, value=0, step=1)
+        total_emitidos = st.number_input("Total de Votos Emitidos", min_value=0, value=280, step=1)
         
         submit_button = st.form_submit_button(label="💾 Guardar Acta en la Base de Datos")
         
@@ -62,9 +61,9 @@ if uploaded_file is not None:
                 "TOTAL EMITIDOS": total_emitidos
             }
             
-            # Guardar o acumular en el archivo CSV
             if os.path.exists(DB_FILE):
                 df_existente = pd.read_csv(DB_FILE)
+                # Opcional: limpiar registros anteriores de prueba si deseas reiniciar la base
                 df_nuevo = pd.concat([df_existente, pd.DataFrame([nuevo_registro])], ignore_index=True)
             else:
                 df_nuevo = pd.DataFrame([nuevo_registro])
@@ -79,6 +78,12 @@ st.subheader("📊 Consolidado General y Proyecciones")
 if os.path.exists(DB_FILE):
     df_db = pd.read_csv(DB_FILE)
     
+    # Opción para limpiar la base de datos de prueba si lo requieres
+    if st.button("🗑️ Reiniciar / Borrar Base de Datos Actual"):
+        if os.path.exists(DB_FILE):
+            os.remove(DB_FILE)
+            st.experimental_rerun()
+
     col_a, col_b = st.columns(2)
     with col_a:
         st.metric(label="Actas Procesadas", value=len(df_db))
@@ -88,7 +93,6 @@ if os.path.exists(DB_FILE):
     with st.expander("Ver tabla completa de actas registradas"):
         st.dataframe(df_db)
         
-        # Botón para descargar la base de datos en Excel/CSV
         st.download_button(
             label="📥 Descargar Base de Datos Completa (CSV)",
             data=df_db.to_csv(index=False).encode('utf-8'),
@@ -106,4 +110,4 @@ if os.path.exists(DB_FILE):
     totales_partidos.columns = ["Organización Política", "Total Acumulado"]
     st.bar_chart(totales_partidos.set_index("Organización Política"))
 else:
-    st.info("ℹ️ Aún no hay actas registradas. Sube la primera acta arriba para comenzar la base de datos.")
+    st.info("ℹ️ Aún no hay actas registradas. Sube la primera acta arriba para comenzar.")
