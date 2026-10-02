@@ -10,7 +10,7 @@ import time
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente en cero.")
+st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente.")
 
 DB_FILE = "base_datos_actas.csv"
 
@@ -24,19 +24,19 @@ except Exception:
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
 
-# Valores por defecto en cero para llenado manual o respaldo
+# Valores por defecto en cero
 default_vals = {
     "mesa": "",
     "p1": 0, "p2": 0, "p3": 0, "p4": 0,
     "p5": 0, "p6": 0, "p7": 0, "p8": 0,
-    "blancos": 0, "nulos": 0, "total": 0
+    "blancos": 0, "nulos": 0, "impugnados": 0, "total": 0
 }
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Acta cargada correctamente", width=450)
     
-    # Botón manual para procesar con IA cuando el usuario lo desee
+    # Botón manual para procesar con IA
     if client:
         if st.button("🤖 Procesar / Leer Acta con Inteligencia Artificial"):
             with st.spinner("Analizando acta, por favor espera un momento..."):
@@ -55,6 +55,7 @@ if uploaded_file is not None:
                 - p8 (votos para COLECCIONISTA DE OBJETOS)
                 - blancos (votos en blanco)
                 - nulos (votos nulos)
+                - impugnados (votos impugnados)
                 - total (total votos emitidos)
                 Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
                 """
@@ -77,7 +78,7 @@ if uploaded_file is not None:
                     st.success("¡Datos extraídos con éxito por la IA!")
                     st.rerun()
                 else:
-                    st.warning("No se pudo conectar con la IA. Los campos están en cero listos para ingreso manual.")
+                    st.warning("No se pudo conectar con la IA. Los campos están listos para ingreso manual.")
 
     data = st.session_state.get("parsed_data", default_vals)
 
@@ -106,12 +107,14 @@ if uploaded_file is not None:
             p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 0)), step=1)
             
         st.markdown("---")
-        col_b1, col_b2, col_b3 = st.columns(3)
+        col_b1, col_b2, col_b3, col_b4 = st.columns(4)
         with col_b1:
             b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 0)), step=1)
         with col_b2:
             b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 0)), step=1)
         with col_b3:
+            b_impugnado = st.number_input("Votos Impugnados", min_value=0, value=int(data.get("impugnados", 0)), step=1)
+        with col_b4:
             total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=int(data.get("total", 0)), step=1)
         
         submit_button = st.form_submit_button(label="💾 Guardar y Consolidar Acta")
@@ -131,6 +134,7 @@ if uploaded_file is not None:
                 "COLECCIONISTA DE OBJETOS": p8,
                 "VOTOS EN BLANCO": b_blanco,
                 "VOTOS NULOS": b_nulo,
+                "VOTOS IMPUGNADOS": b_impugnado,
                 "TOTAL EMITIDOS": total_emitidos
             }
             
