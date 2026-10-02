@@ -53,8 +53,8 @@ if uploaded_file is not None:
                 - total (total votos emitidos)
                 Devuelve únicamente el JSON válido sin texto adicional.
                 """
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+              response = client.models.generate_content(
+                    model='gemini-1.5-flash',  # <--- Cambia esto aquí
                     contents=[image, prompt]
                 )
                 import json
