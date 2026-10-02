@@ -10,7 +10,7 @@ import time
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA.")
+st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA, o ingrésalos manualmente en cero.")
 
 DB_FILE = "base_datos_actas.csv"
 
@@ -24,12 +24,12 @@ except Exception:
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
 
-# Valores por defecto iniciales
+# Valores por defecto en cero para llenado manual o respaldo
 default_vals = {
-    "mesa": "000101",
-    "p1": 35, "p2": 55, "p3": 43, "p4": 35,
-    "p5": 48, "p6": 25, "p7": 30, "p8": 22,
-    "blancos": 12, "nulos": 6, "total": 280
+    "mesa": "",
+    "p1": 0, "p2": 0, "p3": 0, "p4": 0,
+    "p5": 0, "p6": 0, "p7": 0, "p8": 0,
+    "blancos": 0, "nulos": 0, "total": 0
 }
 
 if uploaded_file is not None:
@@ -77,7 +77,7 @@ if uploaded_file is not None:
                     st.success("¡Datos extraídos con éxito por la IA!")
                     st.rerun()
                 else:
-                    st.error("Los servidores están ocupados en este momento. Puedes usar o ajustar los valores manualmente abajo.")
+                    st.warning("No se pudo conectar con la IA. Los campos están en cero listos para ingreso manual.")
 
     data = st.session_state.get("parsed_data", default_vals)
 
@@ -86,7 +86,7 @@ if uploaded_file is not None:
         
         col_mesa, col_tipo = st.columns(2)
         with col_mesa:
-            mesa = st.text_input("N° de Mesa de Votación", value=str(data.get("mesa", "000101")))
+            mesa = st.text_input("N° de Mesa de Votación", value=str(data.get("mesa", "")))
         with col_tipo:
             tipo_acta = st.selectbox("Tipo de Elección", ["Regional / Municipal", "Presidencial", "Congresal"])
         
@@ -95,24 +95,24 @@ if uploaded_file is not None:
         
         col1, col2 = st.columns(2)
         with col1:
-            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=int(data.get("p1", 35)), step=1)
-            p2 = st.number_input("2. AMOR", min_value=0, value=int(data.get("p2", 55)), step=1)
-            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=int(data.get("p3", 43)), step=1)
-            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=int(data.get("p4", 35)), step=1)
+            p1 = st.number_input("1. AMANECER DE NUEVO", min_value=0, value=int(data.get("p1", 0)), step=1)
+            p2 = st.number_input("2. AMOR", min_value=0, value=int(data.get("p2", 0)), step=1)
+            p3 = st.number_input("3. GOTAS DE LLUVIA", min_value=0, value=int(data.get("p3", 0)), step=1)
+            p4 = st.number_input("4. LA MAGIA DEL ENCUENTRO", min_value=0, value=int(data.get("p4", 0)), step=1)
         with col2:
-            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=int(data.get("p5", 48)), step=1)
-            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=int(data.get("p6", 25)), step=1)
-            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=int(data.get("p7", 30)), step=1)
-            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 22)), step=1)
+            p5 = st.number_input("5. CUIDEMOS EL PLANETA", min_value=0, value=int(data.get("p5", 0)), step=1)
+            p6 = st.number_input("6. LOS CAMPEONES", min_value=0, value=int(data.get("p6", 0)), step=1)
+            p7 = st.number_input("7. ORDENANDO LA CASA", min_value=0, value=int(data.get("p7", 0)), step=1)
+            p8 = st.number_input("8. COLECCIONISTA DE OBJETOS", min_value=0, value=int(data.get("p8", 0)), step=1)
             
         st.markdown("---")
         col_b1, col_b2, col_b3 = st.columns(3)
         with col_b1:
-            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 12)), step=1)
+            b_blanco = st.number_input("Votos en Blanco", min_value=0, value=int(data.get("blancos", 0)), step=1)
         with col_b2:
-            b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 6)), step=1)
+            b_nulo = st.number_input("Votos Nulos", min_value=0, value=int(data.get("nulos", 0)), step=1)
         with col_b3:
-            total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=int(data.get("total", 280)), step=1)
+            total_emitidos = st.number_input("Total Votos Emitidos", min_value=0, value=int(data.get("total", 0)), step=1)
         
         submit_button = st.form_submit_button(label="💾 Guardar y Consolidar Acta")
         
