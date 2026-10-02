@@ -10,7 +10,7 @@ import time
 st.set_page_config(page_title="Proyector de Actas Electorales", layout="wide")
 
 st.title("🗳️ Sistema de Registro y Proyección Inteligente de Actas Electorales")
-st.markdown("Sube tu acta de sufragio y la IA extraerá automáticamente los datos correctos.")
+st.markdown("Sube tu acta de sufragio y haz clic en el botón para extraer los datos con IA.")
 
 DB_FILE = "base_datos_actas.csv"
 
@@ -24,61 +24,60 @@ except Exception:
 # Carga de la imagen del acta
 uploaded_file = st.file_uploader("Subir imagen de Acta de Sufragio (.jpg, .png)", type=["jpg", "jpeg", "png"])
 
+# Valores por defecto iniciales
+default_vals = {
+    "mesa": "000101",
+    "p1": 35, "p2": 55, "p3": 43, "p4": 35,
+    "p5": 48, "p6": 25, "p7": 30, "p8": 22,
+    "blancos": 12, "nulos": 6, "total": 280
+}
+
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Acta cargada correctamente", width=450)
     
-    # Valores por defecto por si la IA falla o no está configurada
-    default_vals = {
-        "mesa": "000101",
-        "p1": 35, "p2": 55, "p3": 43, "p4": 35,
-        "p5": 48, "p6": 25, "p7": 30, "p8": 22,
-        "blancos": 12, "nulos": 6, "total": 280
-    }
-
-    # Extracción automática con IA probando varios modelos de respaldo automáticamente
-    if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
-        with st.spinner("🤖 Leyendo el acta de forma inteligente (buscando canal disponible)..."):
-            extracted = None
-            modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-latest']
-            
-            prompt = """
-            Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
-            - mesa (número de mesa, ej: "000101")
-            - p1 (votos para AMANECER DE NUEVO)
-            - p2 (votos para AMOR)
-            - p3 (votos para GOTAS DE LLUVIA)
-            - p4 (votos para LA MAGIA DEL ENCUENTRO)
-            - p5 (votos para CUIDEMOS EL PLANETA)
-            - p6 (votos para LOS CAMPEONES)
-            - p7 (votos para ORDENANDO LA CASA)
-            - p8 (votos para COLECCIONISTA DE OBJETOS)
-            - blancos (votos en blanco)
-            - nulos (votos nulos)
-            - total (total votos emitidos)
-            Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
-            """
-            
-            for modelo in modelos_a_probar:
-                try:
-                    response = client.models.generate_content(
-                        model=modelo,
-                        contents=[image, prompt]
-                    )
-                    text_res = response.text.strip().replace("```json", "").replace("```", "")
-                    extracted = json.loads(text_res)
-                    break # Si responde correctamente con cualquier modelo, salimos del ciclo
-                except Exception as e:
-                    continue # Si falla, intenta con el siguiente modelo de la lista
-            
-            if extracted:
-                st.session_state["parsed_data"] = extracted
-                st.session_state["last_file"] = uploaded_file.name
-                st.success("✅ ¡Datos extraídos con éxito del acta!")
-            else:
-                st.warning("⚠️ Todos los modelos están ocupados temporalmente. Usando valores por defecto.")
-                st.session_state["parsed_data"] = default_vals
-                st.session_state["last_file"] = uploaded_file.name
+    # Botón manual para procesar con IA cuando el usuario lo desee
+    if client:
+        if st.button("🤖 Procesar / Leer Acta con Inteligencia Artificial"):
+            with st.spinner("Analizando acta, por favor espera un momento..."):
+                extracted = None
+                modelos_a_probar = ['gemini-1.5-flash', 'gemini-flash-latest']
+                prompt = """
+                Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
+                - mesa (número de mesa, ej: "000101")
+                - p1 (votos para AMANECER DE NUEVO)
+                - p2 (votos para AMOR)
+                - p3 (votos para GOTAS DE LLUVIA)
+                - p4 (votos para LA MAGIA DEL ENCUENTRO)
+                - p5 (votos para CUIDEMOS EL PLANETA)
+                - p6 (votos para LOS CAMPEONES)
+                - p7 (votos para ORDENANDO LA CASA)
+                - p8 (votos para COLECCIONISTA DE OBJETOS)
+                - blancos (votos en blanco)
+                - nulos (votos nulos)
+                - total (total votos emitidos)
+                Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
+                """
+                
+                for modelo in modelos_a_probar:
+                    try:
+                        response = client.models.generate_content(
+                            model=modelo,
+                            contents=[image, prompt]
+                        )
+                        text_res = response.text.strip().replace("```json", "").replace("```", "")
+                        extracted = json.loads(text_res)
+                        break
+                    except Exception as e:
+                        time.sleep(1)
+                        continue
+                
+                if extracted:
+                    st.session_state["parsed_data"] = extracted
+                    st.success("¡Datos extraídos con éxito por la IA!")
+                    st.rerun()
+                else:
+                    st.error("Los servidores están ocupados en este momento. Puedes usar o ajustar los valores manualmente abajo.")
 
     data = st.session_state.get("parsed_data", default_vals)
 
@@ -92,7 +91,7 @@ if uploaded_file is not None:
             tipo_acta = st.selectbox("Tipo de Elección", ["Regional / Municipal", "Presidencial", "Congresal"])
         
         st.markdown("---")
-        st.markdown("**Votos por Organización Política (Extraídos del acta):**")
+        st.markdown("**Votos por Organización Política:**")
         
         col1, col2 = st.columns(2)
         with col1:
