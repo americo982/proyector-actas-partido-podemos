@@ -36,47 +36,49 @@ if uploaded_file is not None:
         "blancos": 12, "nulos": 6, "total": 280
     }
 
-    # Extracción automática con IA y reintentos automáticos
+    # Extracción automática con IA probando varios modelos de respaldo automáticamente
     if client and ("parsed_data" not in st.session_state or st.session_state.get("last_file") != uploaded_file.name):
-        with st.spinner("🤖 Leyendo el acta de forma inteligente (esto puede tomar un momento)..."):
+        with st.spinner("🤖 Leyendo el acta de forma inteligente (buscando canal disponible)..."):
             extracted = None
-            max_intentos = 3
-            for intento in range(max_intentos):
+            modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-latest']
+            
+            prompt = """
+            Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
+            - mesa (número de mesa, ej: "000101")
+            - p1 (votos para AMANECER DE NUEVO)
+            - p2 (votos para AMOR)
+            - p3 (votos para GOTAS DE LLUVIA)
+            - p4 (votos para LA MAGIA DEL ENCUENTRO)
+            - p5 (votos para CUIDEMOS EL PLANETA)
+            - p6 (votos para LOS CAMPEONES)
+            - p7 (votos para ORDENANDO LA CASA)
+            - p8 (votos para COLECCIONISTA DE OBJETOS)
+            - blancos (votos en blanco)
+            - nulos (votos nulos)
+            - total (total votos emitidos)
+            Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
+            """
+            
+            for modelo in modelos_a_probar:
                 try:
-                    prompt = """
-                    Analiza esta acta electoral de sufragio y extrae estrictamente en formato JSON los siguientes campos numéricos y de texto:
-                    - mesa (número de mesa, ej: "000101")
-                    - p1 (votos para AMANECER DE NUEVO)
-                    - p2 (votos para AMOR)
-                    - p3 (votos para GOTAS DE LLUVIA)
-                    - p4 (votos para LA MAGIA DEL ENCUENTRO)
-                    - p5 (votos para CUIDEMOS EL PLANETA)
-                    - p6 (votos para LOS CAMPEONES)
-                    - p7 (votos para ORDENANDO LA CASA)
-                    - p8 (votos para COLECCIONISTA DE OBJETOS)
-                    - blancos (votos en blanco)
-                    - nulos (votos nulos)
-                    - total (total votos emitidos)
-                    Devuelve únicamente el objeto JSON válido sin bloques markdown ni texto adicional.
-                    """
                     response = client.models.generate_content(
-                        model='gemini-3.8-flash',
+                        model=modelo,
                         contents=[image, prompt]
                     )
                     text_res = response.text.strip().replace("```json", "").replace("```", "")
                     extracted = json.loads(text_res)
-                    break # Si sale bien, rompe el ciclo
+                    break # Si responde correctamente con cualquier modelo, salimos del ciclo
                 except Exception as e:
-                    if intento < max_intentos - 1:
-                        time.sleep(2)
-                    else:
-                        st.warning(f"Usando valores por defecto. Detalle: {e}")
-                        extracted = default_vals
-
-            st.session_state["parsed_data"] = extracted
-            st.session_state["last_file"] = uploaded_file.name
-            if extracted != default_vals:
+                    continue # Si falla, intenta con el siguiente modelo de la lista
+            
+            if extracted:
+                st.session_state["parsed_data"] = extracted
+                st.session_state["last_file"] = uploaded_file.name
                 st.success("✅ ¡Datos extraídos con éxito del acta!")
+            else:
+                st.warning("⚠️ Todos los modelos están ocupados temporalmente. Usando valores por defecto.")
+                st.session_state["parsed_data"] = default_vals
+                st.session_state["last_file"] = uploaded_file.name
 
     data = st.session_state.get("parsed_data", default_vals)
 
